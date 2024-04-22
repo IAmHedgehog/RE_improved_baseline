@@ -1,6 +1,4 @@
 import argparse
-import os
-
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -29,7 +27,7 @@ def train(args, model, train_features, benchmarks):
     num_steps = 0
     for epoch in range(int(args.num_train_epochs)):
         model.zero_grad()
-        for step, batch in enumerate(tqdm(train_dataloader)):
+        for step, batch in enumerate(tqdm(train_dataloader, desc=f'Epoch {epoch}')):
             model.train()
             inputs = {'input_ids': batch[0].to(args.device),
                       'attention_mask': batch[1].to(args.device),
@@ -64,9 +62,8 @@ def train(args, model, train_features, benchmarks):
 def evaluate(args, model, features, tag='dev'):
     dataloader = DataLoader(features, batch_size=args.test_batch_size, collate_fn=collate_fn, drop_last=False)
     keys, preds = [], []
-    for i_b, batch in enumerate(dataloader):
+    for batch in dataloader:
         model.eval()
-
         inputs = {'input_ids': batch[0].to(args.device),
                   'attention_mask': batch[1].to(args.device),
                   'ss': batch[3].to(args.device),
@@ -91,8 +88,9 @@ def evaluate(args, model, features, tag='dev'):
 
 def main():
     parser = argparse.ArgumentParser()
-
-    parser.add_argument("--data_dir", default="./data/retacred", type=str)
+    parser.add_argument("--train_file", default="./data/retacred/train.json", type=str)
+    parser.add_argument("--dev_file", default="./data/retacred/dev.json", type=str)
+    parser.add_argument("--test_file", default="./data/retacred/test.json", type=str)
     parser.add_argument("--model_name_or_path", default="roberta-large", type=str)
     parser.add_argument("--input_format", default="typed_entity_marker_punct", type=str,
                         help="in [entity_mask, entity_marker, entity_marker_punct, typed_entity_marker, typed_entity_marker_punct]")
@@ -152,9 +150,12 @@ def main():
     model = REModel(args, config)
     model.to(0)
 
-    train_file = os.path.join(args.data_dir, "train.json")
-    dev_file = os.path.join(args.data_dir, "dev.json")
-    test_file = os.path.join(args.data_dir, "test.json")
+    # train_file = os.path.join(args.data_dir, "train.json")
+    # dev_file = os.path.join(args.data_dir, "dev.json")
+    # test_file = os.path.join(args.data_dir, "test.json")
+    train_file = args.train_file
+    dev_file = args.dev_file
+    test_file = args.test_file
 
     processor = RETACREDProcessor(args, tokenizer)
     train_features = processor.read(train_file)
